@@ -2,12 +2,20 @@ package com.bawei.xuenhao1505d0821;
 
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.Spannable;
+import android.text.SpannableString;
+import android.text.style.ImageSpan;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.EditText;
 import android.widget.TextView;
 
 import com.baidu.location.BDAbstractLocationListener;
@@ -19,39 +27,38 @@ import com.zhihu.matisse.MimeType;
 import com.zhihu.matisse.engine.impl.GlideEngine;
 import com.zhihu.matisse.filter.Filter;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
 
     public LocationClient mLocationClient = null;
     public BDAbstractLocationListener myListener = new MyLocationListener();
-    private String weizhi;
     private TextView dingwei;
     private Button change;
     private static final int REQUEST_CODE_CHOOSE = 23;//定义请求码常量
     private List<Uri> mSelected;
+    private String weizhi;
+    private EditText ed;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        ed = (EditText) findViewById(R.id.editText);
+        mLocationClient = new LocationClient(getApplicationContext());
+        //声明LocationClient类
+        mLocationClient.registerLocationListener(myListener);
+        initLocation();
+        mLocationClient.start();
         initView();
     }
 
     private void initView() {
         dingwei = (TextView) findViewById(R.id.dingwei);
         change = (Button) findViewById(R.id.change);
-        mLocationClient = new LocationClient(getApplicationContext());
-        //声明LocationClient类
-        mLocationClient.registerLocationListener(myListener);
-        mLocationClient.start();
 
-        dingwei.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                dingwei.setText(weizhi);
-            }
-        });
         change.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
@@ -68,16 +75,9 @@ public class MainActivity extends AppCompatActivity {
                         .forResult(REQUEST_CODE_CHOOSE);//请求码
             }
         });
+
     }
 
-    @Override      //接收返回的地址
-    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_CHOOSE && resultCode == RESULT_OK) {
-            mSelected = Matisse.obtainResult(data);
-            Log.d("Matisse", "mSelected: " + mSelected);
-        }
-    }
     private void initLocation(){
 
         LocationClientOption option = new LocationClientOption();
@@ -122,10 +122,8 @@ public class MainActivity extends AppCompatActivity {
     }
     class MyLocationListener extends BDAbstractLocationListener {
 
-        private String weizhi;
-
         @Override
-        public void onReceiveLocation(BDLocation location) {
+        public void onReceiveLocation(final BDLocation location) {
 
             //获取定位结果
             location.getTime();    //获取定位时间
@@ -141,9 +139,16 @@ public class MainActivity extends AppCompatActivity {
             location.getCityCode();    //获取城市码
             location.getDistrict();    //获取区县信息
             location.getStreet();    //获取街道信息
+            dingwei.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View view) {
+                    dingwei.setText("当前位置"+location.getAddrStr());
+                }
+            });
+
             location.getStreetNumber();    //获取街道码
             location.getLocationDescribe();    //获取当前位置描述信息
-            weizhi = location.getLocationDescribe();
+
             location.getPoiList();    //获取当前位置周边POI信息
 
             location.getBuildingID();    //室内精准定位下，获取楼宇ID
@@ -193,48 +198,84 @@ public class MainActivity extends AppCompatActivity {
          * @param diagnosticType    诊断类型（1~9）
          * @param diagnosticMessage 具体的诊断信息释义
          */
-        public void onLocDiagnosticMessage(int locType, int diagnosticType, String diagnosticMessage) {
+//        public void onLocDiagnosticMessage(int locType, int diagnosticType, String diagnosticMessage) {
+//
+//            if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_BETTER_OPEN_GPS) {
+//
+//                //建议打开GPS
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_BETTER_OPEN_WIFI) {
+//
+//                //建议打开wifi，不必连接，这样有助于提高网络定位精度！
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_CHECK_LOC_PERMISSION) {
+//
+//                //定位权限受限，建议提示用户授予APP定位权限！
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_CHECK_NET) {
+//
+//                //网络异常造成定位失败，建议用户确认网络状态是否异常！
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_CLOSE_FLYMODE) {
+//
+//                //手机飞行模式造成定位失败，建议用户关闭飞行模式后再重试定位！
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_INSERT_SIMCARD_OR_OPEN_WIFI) {
+//
+//                //无法获取任何定位依据，建议用户打开wifi或者插入sim卡重试！
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_OPEN_PHONE_LOC_SWITCH) {
+//
+//                //无法获取有效定位依据，建议用户打开手机设置里的定位开关后重试！
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_SERVER_FAIL) {
+//
+//                //百度定位服务端定位失败
+//                //建议反馈location.getLocationID()和大体定位时间到loc-bugs@baidu.com
+//
+//            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_FAIL_UNKNOWN) {
+//
+//                //无法获取有效定位依据，但无法确定具体原因
+//                //建议检查是否有安全软件屏蔽相关定位权限
+//                //或调用LocationClient.restart()重新启动后重试！
+//
+//            }
+//        }
+    }
 
-            if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_BETTER_OPEN_GPS) {
+    @Override      //接收返回的地址
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_CODE_CHOOSE && resultCode == RESULT_OK) {
+            mSelected = Matisse.obtainResult(data);
+            String path = mSelected.get(0).getPath();
+            Bitmap loadedImage = BitmapFactory.decodeFile(path);
+            Matrix matrix = new Matrix();
+            loadedImage = Bitmap.createBitmap(loadedImage, 0, 0, loadedImage.getWidth(), loadedImage.getHeight(),matrix,true);
+            ImageSpan imageSpan = new ImageSpan(getApplicationContext(), loadedImage);
 
-                //建议打开GPS
+            try {
+                URL url= new URL(path);
+                String tempUrl = "<img src=\""+ url+ "\" />";
+                SpannableString spannableString = new SpannableString(tempUrl);
 
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_BETTER_OPEN_WIFI) {
+                spannableString.setSpan(imageSpan, 0, tempUrl.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
 
-                //建议打开wifi，不必连接，这样有助于提高网络定位精度！
-
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_CHECK_LOC_PERMISSION) {
-
-                //定位权限受限，建议提示用户授予APP定位权限！
-
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_CHECK_NET) {
-
-                //网络异常造成定位失败，建议用户确认网络状态是否异常！
-
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_CLOSE_FLYMODE) {
-
-                //手机飞行模式造成定位失败，建议用户关闭飞行模式后再重试定位！
-
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_INSERT_SIMCARD_OR_OPEN_WIFI) {
-
-                //无法获取任何定位依据，建议用户打开wifi或者插入sim卡重试！
-
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_NEED_OPEN_PHONE_LOC_SWITCH) {
-
-                //无法获取有效定位依据，建议用户打开手机设置里的定位开关后重试！
-
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_SERVER_FAIL) {
-
-                //百度定位服务端定位失败
-                //建议反馈location.getLocationID()和大体定位时间到loc-bugs@baidu.com
-
-            } else if (diagnosticType == LocationClient.LOC_DIAGNOSTIC_TYPE_FAIL_UNKNOWN) {
-
-                //无法获取有效定位依据，但无法确定具体原因
-                //建议检查是否有安全软件屏蔽相关定位权限
-                //或调用LocationClient.restart()重新启动后重试！
-
+// 将选择的图片追加到EditText中光标所在位置
+                int index = ed.getSelectionStart();
+// 获取光标所在位置
+                Editable edit_text = ed.getEditableText();
+                if (index < 0 || index >= edit_text.length()) {
+                    edit_text.append(spannableString);
+                } else {
+                    edit_text.insert(index, spannableString);
+                }
+                edit_text.insert(index + spannableString.length(), "\n");
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
             }
+
+            Log.d("Matisse", "mSelected: " + mSelected.get(0).getPath());
         }
     }
 }

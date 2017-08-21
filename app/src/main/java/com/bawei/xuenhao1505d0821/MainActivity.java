@@ -1,18 +1,13 @@
 package com.bawei.xuenhao1505d0821;
 
 import android.content.Intent;
-import android.content.pm.ActivityInfo;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Matrix;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.text.Editable;
 import android.text.Spannable;
-import android.text.SpannableString;
+import android.text.SpannableStringBuilder;
 import android.text.style.ImageSpan;
-import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
@@ -22,14 +17,9 @@ import com.baidu.location.BDAbstractLocationListener;
 import com.baidu.location.BDLocation;
 import com.baidu.location.LocationClient;
 import com.baidu.location.LocationClientOption;
-import com.zhihu.matisse.Matisse;
-import com.zhihu.matisse.MimeType;
-import com.zhihu.matisse.engine.impl.GlideEngine;
-import com.zhihu.matisse.filter.Filter;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.List;
+
 
 public class MainActivity extends AppCompatActivity {
 
@@ -41,6 +31,7 @@ public class MainActivity extends AppCompatActivity {
     private List<Uri> mSelected;
     private String weizhi;
     private EditText ed;
+    private static final int IMAGE = 1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -62,17 +53,10 @@ public class MainActivity extends AppCompatActivity {
         change.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                Matisse.from(MainActivity.this)
-                        .choose(MimeType.ofAll())//照片视频全部显示
-                        .countable(true)//有序选择图片
-                        .maxSelectable(9)//最大选择数量为9
-                        .gridExpectedSize(getResources().getDimensionPixelSize(R.dimen.media_grid_size))
-                        .restrictOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT)//图像选择和预览活动所需的方向。
-                        .thumbnailScale(0.85f)//缩放比例
-                        .theme(R.style.Matisse_Zhihu)//主题  暗色主题 R.style.Matisse_Dracula
-                        .imageEngine(new GlideEngine())//加载方式
-                        .addFilter(new GifSizeFilter(320, 320, 5 * Filter.K * Filter.K))
-                        .forResult(REQUEST_CODE_CHOOSE);//请求码
+                //调用相册
+                Intent intent = new Intent(Intent.ACTION_PICK,
+                        android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI);
+                startActivityForResult(intent, IMAGE);
             }
         });
 
@@ -246,36 +230,40 @@ public class MainActivity extends AppCompatActivity {
     @Override      //接收返回的地址
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_CODE_CHOOSE && resultCode == RESULT_OK) {
-            mSelected = Matisse.obtainResult(data);
-            String path = mSelected.get(0).getPath();
-            Bitmap loadedImage = BitmapFactory.decodeFile(path);
-            Matrix matrix = new Matrix();
-            loadedImage = Bitmap.createBitmap(loadedImage, 0, 0, loadedImage.getWidth(), loadedImage.getHeight(),matrix,true);
-            ImageSpan imageSpan = new ImageSpan(getApplicationContext(), loadedImage);
-
-            try {
-                URL url= new URL(path);
-                String tempUrl = "<img src=\""+ url+ "\" />";
-                SpannableString spannableString = new SpannableString(tempUrl);
-
-                spannableString.setSpan(imageSpan, 0, tempUrl.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-// 将选择的图片追加到EditText中光标所在位置
-                int index = ed.getSelectionStart();
-// 获取光标所在位置
-                Editable edit_text = ed.getEditableText();
-                if (index < 0 || index >= edit_text.length()) {
-                    edit_text.append(spannableString);
+        if (requestCode == IMAGE) {
+                Uri data1 = data.getData();
+                ImageSpan imageSpan = new ImageSpan(MainActivity.this, data1);
+                String s = ed.getText().toString();
+                if (s.length() != 0 && s != null) {
+                    SpannableStringBuilder sb = new SpannableStringBuilder(s);
+                    sb.setSpan(imageSpan, 0, s.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    // 将选择的图片追加到EditText中光标所在位置
+                    int index = ed.getSelectionStart();
+                    // 获取光标所在位置
+                    Editable edit_text = ed.getEditableText();
+                    if (index < 0 || index >= edit_text.length()) {
+                        edit_text.append(sb);
+                    } else {
+                        edit_text.insert(index, sb);
+                    }
+                    edit_text.insert(index + sb.length(), "\n");
                 } else {
-                    edit_text.insert(index, spannableString);
+                    SpannableStringBuilder sb = new SpannableStringBuilder();
+                    sb.append("插入图片");
+                    sb.setSpan(imageSpan, 0, 4, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    // 将选择的图片追加到EditText中光标所在位置
+                    int index = ed.getSelectionStart();
+                    // 获取光标所在位置
+                    Editable edit_text = ed.getEditableText();
+                    if (index < 0 || index >= edit_text.length()) {
+                        edit_text.append(sb);
+                    } else {
+                        edit_text.insert(index, sb);
+                    }
+                    edit_text.insert(index + sb.length(), "\n");
                 }
-                edit_text.insert(index + spannableString.length(), "\n");
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
+
             }
 
-            Log.d("Matisse", "mSelected: " + mSelected.get(0).getPath());
         }
-    }
 }
